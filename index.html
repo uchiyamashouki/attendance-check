@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>出席確認</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+    #status {
+      margin-top: 2rem;
+      font-size: 1.2rem;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>出席確認中です...</h1>
+  <p>位置情報を確認しています。許可をお願いします。</p>
+  <div id="status">位置情報の取得を待っています...</div>
+
+  <script>
+    // === 必要に応じて書き換えてね ===
+    const TARGET_LAT = 35.66259155564108; // 練習場所の緯度
+    const TARGET_LNG = 140.00899987094292; // 練習場所の経度
+    const ALLOW_RADIUS_METERS = 150;
+    const FORM_URL = "https://docs.google.com/forms/d/1mvI3QlvE0mEcXHKvPp5L8IQngQS0Ice0fPjBHHgUWkA/edite"; // GoogleフォームURL
+
+    function calculateDistance(lat1, lng1, lat2, lng2) {
+      const R = 6378137;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function checkLocation() {
+      const status = document.getElementById("status");
+
+      if (!navigator.geolocation) {
+        status.textContent = "このブラウザでは位置情報が取得できません。";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(position => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        const distance = calculateDistance(userLat, userLng, TARGET_LAT, TARGET_LNG);
+
+        if (distance <= ALLOW_RADIUS_METERS) {
+          status.textContent = "出席OK！フォームに移動します...";
+          setTimeout(() => {
+            window.location.href = FORM_URL;
+          }, 1500);
+        } else {
+          status.innerHTML = `<strong>この場所では出席できません。</strong><br>現在地からの距離：${distance.toFixed(1)}m`;
+        }
+      }, error => {
+        status.textContent = "位置情報の取得に失敗しました。ブラウザの設定を確認してください。";
+      });
+    }
+
+    checkLocation();
+  </script>
+</body>
+</html>
