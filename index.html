@@ -22,14 +22,14 @@
   </style>
 </head>
 <body>
-  <h1>出席確認中です...</h1>
+  <h1>位置情報を確認中です...</h1>
   <p>位置情報を確認しています。許可をお願いします。</p>
   <div id="status">位置情報の取得を待っています...</div>
 
   <script>
-    // === 必要に応じて書き換えてね ===
-    const TARGET_LAT = 35.66259155564108; // 練習場所の緯度
-    const TARGET_LNG = 140.00899987094292; // 練習場所の経度
+    // === 必要に応じて書き換える ===
+    const TARGET_LAT = 35.66259155564108; // 茜浜野球場の緯度
+    const TARGET_LNG = 140.00899987094292; // 茜浜野球場の経度
     const ALLOW_RADIUS_METERS = 200;
     const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSc8_Js0JEoAQUU1WoumelbUYNCoOVAvznyo2Z-Cg7eS1mgujg/viewform?usp=header"; // GoogleフォームURL
 
@@ -58,7 +58,7 @@
         const distance = calculateDistance(userLat, userLng, TARGET_LAT, TARGET_LNG);
 
         if (distance <= ALLOW_RADIUS_METERS) {
-          status.textContent = "出席OK！フォームに移動します...";
+          status.textContent = "位置情報OK！出欠フォームに移動します...";
           setTimeout(() => {
             window.location.href = FORM_URL;
           }, 1500);
