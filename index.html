@@ -1,76 +1,121 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>出席確認</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>出欠記録</title>
   <style>
     body {
       font-family: sans-serif;
-      text-align: center;
-      padding: 2rem;
+      padding: 1rem;
+      max-width: 500px;
+      margin: auto;
     }
     h1 {
-      font-size: 1.8rem;
-      margin-bottom: 1rem;
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    button {
+      margin-top: 1.5rem;
+      width: 100%;
+      padding: 0.75rem;
+      background: #007bff;
+      color: white;
+      border: none;
+      font-size: 1rem;
+      border-radius: 6px;
     }
     #status {
-      margin-top: 2rem;
-      font-size: 1.2rem;
-      color: #333;
+      margin-top: 1rem;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <h1>位置情報を確認中です...</h1>
-  <p>位置情報を確認しています。許可をお願いします。</p>
-  <div id="status">位置情報の取得を待っています...</div>
+  <h1>出欠記録フォーム</h1>
+  <p>位置情報を取得して確認中...</p>
+  <form id="form" style="display:none;">
+    <label>氏名
+      <input type="text" id="name" required />
+    </label>
+    <label>練習区分
+      <select id="status" required>
+        <option value="">選択してください</option>
+        <option value="開始">開始</option>
+        <option value="終了">終了</option>
+      </select>
+    </label>
+    <label>投球数
+      <input type="number" id="count" min="0" />
+    </label>
+    <button type="submit">送信</button>
+    <div id="status"></div>
+  </form>
 
   <script>
-    // === 必要に応じて書き換える ===
-    const TARGET_LAT = 35.66259155564108; // 茜浜野球場の緯度
-    const TARGET_LNG = 140.00899987094292; // 茜浜野球場の経度
-    const ALLOW_RADIUS_METERS = 200;//位置情報許容範囲
-    const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSc8_Js0JEoAQUU1WoumelbUYNCoOVAvznyo2Z-Cg7eS1mgujg/viewform?usp=header"; // GoogleフォームURL
+    //値調整可能場所
+    const POST_URL = "https://script.google.com/macros/s/AKfycbyOAAFxONs6feTpfRURL3c3qPu4HiVMgDV_xMcwTRQvpx9dTgbTpoJORndwfFjwZfNKvw/execE"; // ← あなたのGASのURLに置き換えてね
+    const TARGET_LAT = 35.66259155564108;//茜浜野球場の緯度
+    const TARGET_LNG = 140.00899987094292;//茜浜野球場の経度
+    const ALLOW_RADIUS_METERS = 150;//出欠可能な距離の指定
 
     function calculateDistance(lat1, lng1, lat2, lng2) {
       const R = 6378137;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLng = (lng2 - lng1) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLng/2) * Math.sin(dLng/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(lat1 * Math.PI / 180) *
+                Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     }
 
-    function checkLocation() {
-      const status = document.getElementById("status");
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const distance = calculateDistance(lat, lng, TARGET_LAT, TARGET_LNG);
 
-      if (!navigator.geolocation) {
-        status.textContent = "このブラウザでは位置情報が取得できません。";
-        return;
+      if (distance <= ALLOW_RADIUS_METERS) {
+        document.querySelector("form").style.display = "block";
+
+        document.getElementById("form").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const name = document.getElementById("name").value;
+          const status = document.getElementById("status").value;
+          const count = document.getElementById("count").value;
+          const statusDiv = document.getElementById("status");
+
+          fetch(POST_URL, {
+            method: "POST",
+            body: JSON.stringify({ name, status, count, lat, lng, distance }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+            .then((res) => res.text())
+            .then((resText) => {
+              statusDiv.innerHTML = "送信しました！";
+              document.getElementById("form").reset();
+            })
+            .catch((err) => {
+              statusDiv.innerHTML = "送信に失敗しました。";
+            });
+        });
+      } else {
+        document.body.innerHTML = "<h2>この場所では記録できません</h2>";
       }
-
-      navigator.geolocation.getCurrentPosition(position => {
-        const userLat = position.coords.latitude;
-        const userLng = position.coords.longitude;
-        const distance = calculateDistance(userLat, userLng, TARGET_LAT, TARGET_LNG);
-
-        if (distance <= ALLOW_RADIUS_METERS) {
-          status.textContent = "位置情報OK！出欠フォームに移動します...";
-          setTimeout(() => {
-            window.location.href = FORM_URL;
-          }, 1500);
-        } else {
-          status.innerHTML = `<strong>この場所では出席できません。</strong><br>現在地からの距離：${distance.toFixed(1)}m`;
-        }
-      }, error => {
-        status.textContent = "位置情報の取得に失敗しました。ブラウザの設定を確認してください。";
-      });
-    }
-
-    checkLocation();
+    }, () => {
+      document.body.innerHTML = "<h2>位置情報を取得できませんでした</h2>";
+    });
   </script>
 </body>
 </html>
