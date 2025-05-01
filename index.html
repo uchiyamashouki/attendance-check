@@ -36,14 +36,15 @@
     #status {
       margin-top: 1rem;
       text-align: center;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <h1>出欠記録フォーム</h1>
-  <p>位置情報を取得して確認中...</p>
+  <p id="intro">位置情報を取得して確認中...</p>
   <form id="form" style="display:none;">
-    <label>氏名：例　工大太郎
+    <label>氏名
       <input type="text" id="name" required />
     </label>
     <label>練習区分
@@ -53,7 +54,7 @@
         <option value="終了">終了</option>
       </select>
     </label>
-    <label>投球数　数字のみ回答
+    <label>投球数
       <input type="number" id="count" min="0" />
     </label>
     <button type="submit">送信</button>
@@ -61,11 +62,68 @@
   </form>
 
   <script>
-    //値調整可能場所
-    const POST_URL = "https://script.google.com/macros/s/AKfycbyOAAFxONs6feTpfRURL3c3qPu4HiVMgDV_xMcwTRQvpx9dTgbTpoJORndwfFjwZfNKvw/execE"; // ← あなたのGASのURLに置き換えてね
+    const POST_URL = "https://script.google.com/macros/s/AKfycbyOAAFxONs6feTpfRURL3c3qPu4HiVMgDV_xMcwTRQvpx9dTgbTpoJORndwfFjwZfNKvw/execE"; // あなたのGAS URLに変更！
     const TARGET_LAT = 35.66259155564108;//茜浜野球場の緯度
     const TARGET_LNG = 140.00899987094292;//茜浜野球場の経度
-    const ALLOW_RADIUS_METERS = 150;//出欠可能な距離の指定
+    const ALLOW_RADIUS_METERS = 3000;//出欠可能な距離の指定　デバックのため3000メートル
+
+    const todayKey = `submitted-${new Date().toISOString().slice(0, 10)}`;
+    const submissionCountKey = "submissionCount";
+    const intro = document.getElementById("intro");
+    const form = document.getElementById("form");
+    const statusDiv = document.getElementById("status");
+
+    const submissionCount = localStorage.getItem(submissionCountKey) || 0;
+
+    if (submissionCount >= 3) {
+      intro.textContent = "本日は送信回数の上限（3回）に達しました。";
+    } else if (localStorage.getItem(todayKey)) {
+      intro.textContent = "この端末では本日すでに出席が記録されています。";
+    } else {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const distance = calculateDistance(lat, lng, TARGET_LAT, TARGET_LNG);
+
+        if (distance <= ALLOW_RADIUS_METERS) {
+          form.style.display = "block";
+          intro.textContent = "出席内容を入力してください。";
+
+          form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const name = document.getElementById("name").value.trim();
+            const status = document.getElementById("status").value;
+            const count = document.getElementById("count").value;
+
+            fetch(POST_URL, {
+              method: "POST",
+              body: JSON.stringify({ name, status, count, lat, lng, distance }),
+              headers: {
+                "Content-Type": "application/json",
+              },
+            })
+              .then((res) => res.text())
+              .then((resText) => {
+                localStorage.setItem(todayKey, "true");
+                localStorage.setItem(submissionCountKey, parseInt(submissionCount) + 1);
+                statusDiv.innerHTML = "✅ 送信しました！この画面は5秒後に閉じます。";
+                setTimeout(() => {
+                  form.style.display = "none";
+                  intro.textContent = "正常に記録されました。";
+                  statusDiv.innerHTML = "";
+                }, 5000);
+              })
+              .catch((err) => {
+                statusDiv.innerHTML = "❌ 送信に失敗しました。ネットワークを確認してください。";
+              });
+          });
+        } else {
+          document.body.innerHTML = "<h2>この場所では出席できません。</h2>";
+        }
+      }, () => {
+        document.body.innerHTML = "<h2>位置情報を取得できませんでした。</h2>";
+      });
+    }
 
     function calculateDistance(lat1, lng1, lat2, lng2) {
       const R = 6378137;
@@ -78,44 +136,6 @@
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     }
-
-    navigator.geolocation.getCurrentPosition(pos => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      const distance = calculateDistance(lat, lng, TARGET_LAT, TARGET_LNG);
-
-      if (distance <= ALLOW_RADIUS_METERS) {
-        document.querySelector("form").style.display = "block";
-
-        document.getElementById("form").addEventListener("submit", (e) => {
-          e.preventDefault();
-          const name = document.getElementById("name").value;
-          const status = document.getElementById("status").value;
-          const count = document.getElementById("count").value;
-          const statusDiv = document.getElementById("status");
-
-          fetch(POST_URL, {
-            method: "POST",
-            body: JSON.stringify({ name, status, count, lat, lng, distance }),
-            headers: {
-              "Content-Type": "application/json",
-            },
-          })
-            .then((res) => res.text())
-            .then((resText) => {
-              statusDiv.innerHTML = "送信しました！";
-              document.getElementById("form").reset();
-            })
-            .catch((err) => {
-              statusDiv.innerHTML = "送信に失敗しました。";
-            });
-        });
-      } else {
-        document.body.innerHTML = "<h2>この場所では記録できません</h2>";
-      }
-    }, () => {
-      document.body.innerHTML = "<h2>位置情報を取得できませんでした</h2>";
-    });
   </script>
 </body>
 </html>
