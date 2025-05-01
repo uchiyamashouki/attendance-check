@@ -102,23 +102,24 @@
                 "Content-Type": "application/json",
               },
             })
-              .then((res) => res.text())
-              .then((resText) => {
-                localStorage.setItem(todayKey, "true");
-                localStorage.setItem(submissionCountKey, parseInt(submissionCount) + 1);
-               
-              // 入力欄とボタンを無効化する
-              document.getElementById("name").disabled = true;
-              document.getElementById("status").disabled = true;
-              document.getElementById("count").disabled = true;
-              form.querySelector("button").disabled = true;
+             .then((res) => res.text())
+             .then((resText) => {
+             localStorage.setItem(todayKey, "true");
+             localStorage.setItem(submissionCountKey, parseInt(submissionCount) + 1);
+               // 入力欄とボタンを無効化する
+               document.getElementById("name").disabled = true;
+               document.getElementById("status").disabled = true;
+               document.getElementById("count").disabled = true;
+               form.querySelector("button").disabled = true;
 
-              statusDiv.innerHTML = "✅ 送信しました！この画面は5秒後にロックされます。";
+               statusDiv.innerHTML = "✅ 送信しました！この画面は5秒後にロックされます。";
 
-                setTimeout(() => {
-                  intro.textContent = "本日の出席はすでに記録されています。";
-                  statusDiv.innerHTML = "";
-                }, 5000);
+               setTimeout(() => {
+                 intro.textContent = "本日の出席はすでに記録されています。";
+                 statusDiv.innerHTML = "";
+               }, 5000);
+             })
+
               })        
               .catch((err) => {
                 statusDiv.innerHTML = "❌ 送信に失敗しました。ネットワークを確認してください。";
