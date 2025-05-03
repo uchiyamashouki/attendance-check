@@ -2,6 +2,38 @@
 <html>
 <head>
   <title>出欠記録フォーム</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 18px; /* 基本フォントサイズを調整 */
+      padding: 10px;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    h2 {
+      font-size: 24px;
+    }
+    label, input {
+      font-size: 18px; /* 入力フォームやラベルのサイズを調整 */
+    }
+    input[type="text"], input[type="number"], input[type="button"] {
+      font-size: 18px; /* ボタンやテキストフィールドを大きく */
+      padding: 10px;
+      width: 100%; /* スマホ画面に合わせる */
+    }
+    /* スマホサイズに合わせたレスポンシブデザイン */
+    @media (max-width: 600px) {
+      body {
+        font-size: 16px; /* スマホ画面ではフォントサイズを小さく */
+      }
+      input[type="text"], input[type="number"], input[type="button"] {
+        font-size: 16px;
+      }
+      h2 {
+        font-size: 20px;
+      }
+    }
+  </style>
   <script>
     // 位置情報取得と範囲内外チェック関数
     function getLocationAndCheck() {
@@ -13,7 +45,7 @@
           // 茜浜球場の座標
           var targetLat = 35.662683;
           var targetLon = 140.008933;
-          var threshold = 0.100*; // 許容範囲 (100m*100)デバックとして100倍
+          var threshold = 10000; // 許容範囲 (100m*100)
 
           // 2点間の距離を計算（Haversine式）
           var distance = calculateDistance(lat, lon, targetLat, targetLon);
@@ -60,7 +92,7 @@
 </head>
 <body>
   <h2>出欠記録フォーム</h2>
-  <form id="attendanceForm" action="https://docs.google.com/forms/d/11u-H6JEc2_7lcMvyHNQt698voXjqTPBELZJewiwMmHo/edit" method="POST">
+  <form id="attendanceForm" action="https://docs.google.com/forms/d/e/1FAIpQLSdJ8A5O_sXrU9alh1Hp8V0D1X9EXAMPLE/formResponse" method="POST">
     <!-- 氏名入力 -->
     <label for="name">氏名:</label>
     <input type="text" name="entry.XXXXXXX" id="name" required>
@@ -72,7 +104,6 @@
     <label for="start">開始</label><br>
     <input type="radio" id="end" name="attendance" value="終了" required>
     <label for="end">終了</label><br>
-
     
     <br>
     <label for="pitches">投球数 (任意):</label>
@@ -91,5 +122,3 @@
   <div id="message"></div> 
 </body>
 </html>
-
-
