@@ -1,144 +1,89 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>出欠記録</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 1rem;
-      max-width: 500px;
-      margin: auto;
-    }
-    h1 {
-      text-align: center;
-    }
-    label {
-      display: block;
-      margin-top: 1rem;
-    }
-    input, select {
-      width: 100%;
-      padding: 0.5rem;
-      margin-top: 0.5rem;
-    }
-    button {
-      margin-top: 1.5rem;
-      width: 100%;
-      padding: 0.75rem;
-      background: #007bff;
-      color: white;
-      border: none;
-      font-size: 1rem;
-      border-radius: 6px;
-    }
-    #status {
-      margin-top: 1rem;
-      text-align: center;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
-  <h1>出欠記録フォーム</h1>
-  <p id="intro">位置情報を取得して確認中...</p>
-  <form id="form" style="display:none;">
-    <label>氏名
-      <input type="text" id="name" required />
-    </label>
-    <label>練習区分
-      <select id="status" required>
-        <option value="">選択してください</option>
-        <option value="開始">開始</option>
-        <option value="終了">終了</option>
-      </select>
-    </label>
-    <label>投球数
-      <input type="number" id="count" min="0" />
-    </label>
-    <button type="submit">送信</button>
-    <div id="status"></div>
-  </form>
-
+  <title>出欠記録フォーム</title>
   <script>
-    const POST_URL = "https://script.google.com/macros/s/AKfycbzsH9b0l33rQZMlMtpVOLud9Agol3wLy4ndKT3XApk3GOy535sNmoA_9rClmoFRtsNVrA/exec";
-    const TARGET_LAT = 35.66259155564108;
-    const TARGET_LNG = 140.00899987094292;
-    const ALLOW_RADIUS_METERS = 100000;
+    // 位置情報取得と範囲内外チェック関数
+    function getLocationAndCheck() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var lat = position.coords.latitude;
+          var lon = position.coords.longitude;
 
-    const todayKey = `submitted-${new Date().toISOString().slice(0, 10)}`;
-    const submissionCountKey = "submissionCount";
-    const intro = document.getElementById("intro");
-    const form = document.getElementById("form");
-    const statusDiv = document.getElementById("status");
+          // 茜浜球場の座標
+          var targetLat = 35.662683;
+          var targetLon = 140.008933;
+          var threshold = 0.001; // 許容範囲 (100m)
 
-    let submissionCount = parseInt(localStorage.getItem(submissionCountKey)) || 0;
-
-    if (submissionCount >= 3) {
-      intro.textContent = "本日は送信回数の上限（3回）に達しました。";
-    } else if (localStorage.getItem(todayKey)) {
-      intro.textContent = "この端末では本日すでに出席が記録されています。";
-    } else {
-      navigator.geolocation.getCurrentPosition(pos => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const distance = calculateDistance(lat, lng, TARGET_LAT, TARGET_LNG);
-
-        if (distance <= ALLOW_RADIUS_METERS) {
-          form.style.display = "block";
-          intro.textContent = "出席内容を入力してください。";
-
-          form.addEventListener("submit", (e) => {
-            e.preventDefault();
-            const name = document.getElementById("name").value.trim();
-            const status = document.getElementById("status").value;
-            const count = document.getElementById("count").value;
-
-            fetch(POST_URL, {
-              method: "POST",
-              body: JSON.stringify({ name, status, count, lat, lng, distance }),
-              headers: {
-                "Content-Type": "application/json",
-              },
-            })
-              .then((res) => res.text())
-              .then((resText) => {
-                localStorage.setItem(todayKey, "true");
-                localStorage.setItem(submissionCountKey, submissionCount + 1);
-                document.getElementById("name").disabled = true;
-                document.getElementById("status").disabled = true;
-                document.getElementById("count").disabled = true;
-                form.querySelector("button").disabled = true;
-                statusDiv.innerHTML = "✅ 送信しました！この画面は5秒後にロックされます。";
-                setTimeout(() => {
-                  intro.textContent = "本日の出席はすでに記録されています。";
-                  statusDiv.innerHTML = "";
-                }, 5000);
-              })
-              .catch((err) => {
-                statusDiv.innerHTML = "❌ 送信に失敗しました。ネットワークを確認してください。";
-              });
-          });
-        } else {
-          document.body.innerHTML = "<h2>この場所では出席できません。</h2>";
-        }
-      }, () => {
-        document.body.innerHTML = "<h2>位置情報を取得できませんでした。</h2>";
-      });
+          // 2点間の距離を計算（Haversine式）
+          var distance = calculateDistance(lat, lon, targetLat, targetLon);
+          
+          if (distance > threshold) {
+            alert("位置情報が正しくありません。茜浜球場付近からアクセスしてください。");
+            return;  // 送信停止
+          } else {
+            // 位置情報が正しい場合、フォームに送信
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lon;
+            document.getElementById('attendanceForm').submit();  // フォーム送信
+          }
+        }, function(error) {
+          alert("位置情報が取得できません");
+        });
+      } else {
+        alert("位置情報取得がサポートされていません");
+      }
     }
 
-    function calculateDistance(lat1, lng1, lat2, lng2) {
-      const R = 6378137;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLng = (lng2 - lng1) * Math.PI / 180;
-      const a = Math.sin(dLat / 2) ** 2 +
-                Math.cos(lat1 * Math.PI / 180) *
-                Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLng / 2) ** 2;
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
+    // 2点間の距離を計算（Haversine式）
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      var R = 6371; // 地球の半径 (km)
+      var dLat = degreesToRadians(lat2 - lat1);
+      var dLon = degreesToRadians(lon2 - lon1);
+      
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(degreesToRadians(lat1)) * Math.cos(degreesToRadians(lat2)) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      
+      var distance = R * c; // 距離を求める
+      return distance;
+    }
+
+    // 度をラジアンに変換
+    function degreesToRadians(degrees) {
+      return degrees * Math.PI / 180;
     }
   </script>
+</head>
+<body>
+  <h2>出欠記録フォーム</h2>
+  <form id="attendanceForm" action="https://docs.google.com/forms/d/11u-H6JEc2_7lcMvyHNQt698voXjqTPBELZJewiwMmHo/edit" method="POST">
+    <!-- 氏名入力 -->
+    <label for="name">氏名:</label>
+    <input type="text" name="entry.XXXXXXX" id="name" required>
+    <br>
+    
+    <!-- 出欠記録 -->
+    <label for="start_time">開始時間:</label>
+    <input type="time" name="entry.YYYYYYY" required>
+    <br>
+    
+    <label for="end_time">終了時間:</label>
+    <input type="time" name="entry.ZZZZZZZ" required>
+    <br>
+    
+    <label for="pitches">投球数 (任意):</label>
+    <input type="number" name="entry.AAAAAAA" placeholder="投球数">
+    <br>
+    
+    <!-- 位置情報 (非表示) -->
+    <input type="hidden" name="entry.BBBBBBB" id="latitude">
+    <input type="hidden" name="entry.CCCCCC" id="longitude">
+    
+    <!-- 送信ボタン -->
+    <input type="button" value="送信" onclick="getLocationAndCheck()">
+  </form>
 </body>
 </html>
+
