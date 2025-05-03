@@ -26,6 +26,8 @@
             document.getElementById('latitude').value = lat;
             document.getElementById('longitude').value = lon;
             document.getElementById('attendanceForm').submit();  // フォーム送信
+            // 記録完了メッセージの表示
+            document.getElementById('message').innerText = "記録を完了しました！";
           }
         }, function(error) {
           alert("位置情報が取得できません");
@@ -64,15 +66,15 @@
     <input type="text" name="entry.XXXXXXX" id="name" required>
     <br>
     
-    <!-- 出欠記録 -->
-    <label for="start_time">開始時間:</label>
-    <input type="time" name="entry.YYYYYYY" required>
-    <br>
+    <!-- 出欠記録 -->  
+    <label for="attendance">出欠記録:</label><br>
+    <input type="radio" id="start" name="attendance" value="開始" required>
+    <label for="start">開始</label><br>
+    <input type="radio" id="end" name="attendance" value="終了" required>
+    <label for="end">終了</label><br>
+    //ラジオボタン式に仕様変更
     
-    <label for="end_time">終了時間:</label>
-    <input type="time" name="entry.ZZZZZZZ" required>
     <br>
-    
     <label for="pitches">投球数 (任意):</label>
     <input type="number" name="entry.AAAAAAA" placeholder="投球数">
     <br>
@@ -84,6 +86,10 @@
     <!-- 送信ボタン -->
     <input type="button" value="送信" onclick="getLocationAndCheck()">
   </form>
+  
+  <!-- 記録完了メッセージ -->
+  <div id="message"></div> //記録完了メッセージを表記
 </body>
 </html>
+
 
