@@ -26,7 +26,7 @@
       margin-bottom: 8px;
       font-weight: bold;
     }
-    input[type="text"], input[type="number"] {
+    input[type="text"], input[type="number"], input[type="password"] {
       font-size: 18px;
       padding: 12px;
       width: 100%;
@@ -146,6 +146,43 @@
       display: none;
       margin-top: 20px;
     }
+    /* モーダルスタイル */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 5px;
+      width: 80%;
+      max-width: 400px;
+    }
+    .modal-title {
+      margin-top: 0;
+      color: #333;
+    }
+    .modal-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+    .modal-buttons button {
+      width: 48%;
+    }
+    .cancel-button {
+      background-color: #6c757d;
+    }
+    .cancel-button:hover {
+      background-color: #5a6268;
+    }
   </style>
 </head>
 <body>
@@ -155,7 +192,22 @@
   <div id="userInfo" class="user-info">
     <p>登録ユーザー: <span id="registeredName" class="user-name"></span></p>
     <p id="lastAttendanceInfo"></p>
-    <button id="resetUserBtn" class="reset-button" onclick="resetUserData()">別のユーザーとして登録</button>
+    <button id="resetUserBtn" class="reset-button" onclick="showPasswordModal()">別のユーザーとして登録</button>
+  </div>
+  
+  <!-- パスワードモーダル -->
+  <div id="passwordModal" class="modal">
+    <div class="modal-content">
+      <h3 class="modal-title">管理者パスワード</h3>
+      <div class="form-group">
+        <label for="adminPassword">パスワードを入力してください:</label>
+        <input type="password" id="adminPassword">
+      </div>
+      <div class="modal-buttons">
+        <button onclick="verifyPasswordAndReset()" class="confirm-button">確認</button>
+        <button onclick="closePasswordModal()" class="cancel-button">キャンセル</button>
+      </div>
+    </div>
   </div>
   
   <!-- 新規ユーザー登録フォーム -->
@@ -212,10 +264,37 @@
   </div>
 
   <script>
+    // 管理者パスワード
+    const ADMIN_PASSWORD = "Kodai1942!!";
+    
     // ページ読み込み時の初期化
     document.addEventListener('DOMContentLoaded', function() {
       initializeUserData();
     });
+    
+    // パスワードモーダルを表示
+    function showPasswordModal() {
+      document.getElementById('passwordModal').style.display = 'block';
+      document.getElementById('adminPassword').value = '';
+      document.getElementById('adminPassword').focus();
+    }
+    
+    // パスワードモーダルを閉じる
+    function closePasswordModal() {
+      document.getElementById('passwordModal').style.display = 'none';
+    }
+    
+    // パスワード確認とリセット
+    function verifyPasswordAndReset() {
+      const password = document.getElementById('adminPassword').value;
+      
+      if (password === ADMIN_PASSWORD) {
+        closePasswordModal();
+        resetUserData();
+      } else {
+        showMessage('パスワードが正しくありません', 'error');
+      }
+    }
     
     // ユーザーデータの初期化
     function initializeUserData() {
@@ -324,11 +403,9 @@
     
     // ユーザーデータのリセット
     function resetUserData() {
-      if (confirm('登録情報をリセットしますか？')) {
-        localStorage.removeItem('attendanceUserData');
-        initializeUserData();
-        showMessage('登録情報をリセットしました', 'info');
-      }
+      localStorage.removeItem('attendanceUserData');
+      initializeUserData();
+      showMessage('登録情報をリセットしました', 'info');
     }
     
     // ユーザーデータの取得
@@ -545,6 +622,13 @@
       document.getElementById('loading').style.display = show ? 'block' : 'none';
       document.getElementById('submitBtn').disabled = show;
     }
+    
+    // Enterキーでパスワード送信
+    document.getElementById('adminPassword').addEventListener('keyup', function(event) {
+      if (event.key === 'Enter') {
+        verifyPasswordAndReset();
+      }
+    });
   </script>
 </body>
 </html>
