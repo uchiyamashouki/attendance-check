@@ -61,6 +61,10 @@
     button:hover {
       background-color: #45a049;
     }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
     #message {
       margin-top: 20px;
       padding: 15px;
@@ -75,6 +79,14 @@
     .error {
       background-color: #f8d7da;
       color: #721c24;
+    }
+    .warning {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    .info {
+      background-color: #d1ecf1;
+      color: #0c5460;
     }
     .loading {
       display: none;
@@ -102,10 +114,60 @@
       color: #333;
       display: none;
     }
+    .user-info {
+      background-color: #e9ecef;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .user-info p {
+      margin: 0;
+      font-size: 16px;
+    }
+    .user-info .user-name {
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .reset-button {
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .reset-button:hover {
+      background-color: #5a6268;
+    }
+    .registration-form {
+      display: none;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
   <h2>出欠記録フォーム</h2>
+  
+  <!-- ユーザー情報表示エリア -->
+  <div id="userInfo" class="user-info">
+    <p>登録ユーザー: <span id="registeredName" class="user-name"></span></p>
+    <p id="lastAttendanceInfo"></p>
+    <button id="resetUserBtn" class="reset-button" onclick="resetUserData()">別のユーザーとして登録</button>
+  </div>
+  
+  <!-- 新規ユーザー登録フォーム -->
+  <div id="registrationForm" class="registration-form">
+    <div class="form-group">
+      <label for="registerName">氏名を登録してください:</label>
+      <input type="text" id="registerName" placeholder="例：工大太郎" required>
+    </div>
+    <button type="button" onclick="registerUser()">登録</button>
+  </div>
+  
+  <!-- 出欠記録フォーム -->
   <form id="attendanceForm" action="https://docs.google.com/forms/d/e/1FAIpQLSegSTTLeL75exvNWpF2iEQqdP8nUC4p55TBLpjvPR1WGefBCA/formResponse" method="POST">
     <div class="form-group">
       <label for="name">氏名:</label>
@@ -150,6 +212,158 @@
   </div>
 
   <script>
+    // ページ読み込み時の初期化
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeUserData();
+    });
+    
+    // ユーザーデータの初期化
+    function initializeUserData() {
+      const userData = getUserData();
+      
+      if (userData && userData.name) {
+        // 登録済みユーザーの場合
+        document.getElementById('registeredName').textContent = userData.name;
+        document.getElementById('userInfo').style.display = 'block';
+        document.getElementById('registrationForm').style.display = 'none';
+        document.getElementById('attendanceForm').style.display = 'block';
+        
+        // フォームに名前を設定して読み取り専用にする
+        const nameInput = document.getElementById('name');
+        nameInput.value = userData.name;
+        nameInput.readOnly = true;
+        
+        // 最終出欠記録情報を表示
+        updateLastAttendanceInfo(userData);
+        
+        // 出欠ボタンの状態を更新
+        updateAttendanceButtonState(userData);
+      } else {
+        // 未登録ユーザーの場合
+        document.getElementById('userInfo').style.display = 'none';
+        document.getElementById('registrationForm').style.display = 'block';
+        document.getElementById('attendanceForm').style.display = 'none';
+      }
+    }
+    
+    // 最終出欠記録情報を更新
+    function updateLastAttendanceInfo(userData) {
+      const infoElement = document.getElementById('lastAttendanceInfo');
+      let infoText = '';
+      
+      const today = new Date().toLocaleDateString();
+      
+      if (userData.lastStart && userData.lastStart.date === today) {
+        const time = userData.lastStart.time;
+        infoText += `本日の開始記録: ${time}`;
+      }
+      
+      if (userData.lastEnd && userData.lastEnd.date === today) {
+        if (infoText) infoText += '<br>';
+        const time = userData.lastEnd.time;
+        infoText += `本日の終了記録: ${time}`;
+      }
+      
+      if (!infoText) {
+        infoText = '本日の記録: なし';
+      }
+      
+      infoElement.innerHTML = infoText;
+    }
+    
+    // 出欠ボタンの状態を更新
+    function updateAttendanceButtonState(userData) {
+      const startRadio = document.getElementById('start');
+      const endRadio = document.getElementById('end');
+      const today = new Date().toLocaleDateString();
+      
+      // 本日すでに開始記録がある場合
+      if (userData.lastStart && userData.lastStart.date === today) {
+        startRadio.disabled = true;
+        startRadio.checked = false;
+        endRadio.checked = true;
+      }
+      
+      // 本日すでに終了記録がある場合
+      if (userData.lastEnd && userData.lastEnd.date === today) {
+        endRadio.disabled = true;
+        endRadio.checked = false;
+        startRadio.checked = true;
+      }
+      
+      // 両方記録済みの場合
+      if ((userData.lastStart && userData.lastStart.date === today) && 
+          (userData.lastEnd && userData.lastEnd.date === today)) {
+        document.getElementById('submitBtn').disabled = true;
+        showMessage('本日の出欠記録は既に完了しています', 'info');
+      }
+    }
+    
+    // ユーザー登録
+    function registerUser() {
+      const nameInput = document.getElementById('registerName');
+      const name = nameInput.value.trim();
+      
+      if (!name) {
+        showMessage('氏名を入力してください', 'error');
+        return;
+      }
+      
+      // ユーザーデータを保存
+      const userData = {
+        name: name,
+        registeredAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem('attendanceUserData', JSON.stringify(userData));
+      
+      // 画面を更新
+      initializeUserData();
+      showMessage(`${name}さんとして登録しました`, 'success');
+    }
+    
+    // ユーザーデータのリセット
+    function resetUserData() {
+      if (confirm('登録情報をリセットしますか？')) {
+        localStorage.removeItem('attendanceUserData');
+        initializeUserData();
+        showMessage('登録情報をリセットしました', 'info');
+      }
+    }
+    
+    // ユーザーデータの取得
+    function getUserData() {
+      const data = localStorage.getItem('attendanceUserData');
+      return data ? JSON.parse(data) : null;
+    }
+    
+    // ユーザーデータの更新
+    function updateUserData(newData) {
+      const currentData = getUserData() || {};
+      const updatedData = { ...currentData, ...newData };
+      localStorage.setItem('attendanceUserData', JSON.stringify(updatedData));
+      return updatedData;
+    }
+    
+    // 出欠記録の保存
+    function saveAttendanceRecord(type) {
+      const now = new Date();
+      const date = now.toLocaleDateString();
+      const time = now.toLocaleTimeString();
+      
+      let updateData = {};
+      
+      if (type === '開始') {
+        updateData.lastStart = { date, time };
+      } else if (type === '終了') {
+        updateData.lastEnd = { date, time };
+      }
+      
+      const updatedUserData = updateUserData(updateData);
+      updateLastAttendanceInfo(updatedUserData);
+      updateAttendanceButtonState(updatedUserData);
+    }
+    
     // フォームの検証と送信
     function validateAndSubmit() {
       console.log("フォーム検証開始");
@@ -158,26 +372,20 @@
       const name = document.getElementById('name').value;
       console.log("名前:", name);
       
-      // すべてのラジオボタンをログ出力
-      const allRadios = document.querySelectorAll('input[type="radio"]');
-      console.log("ラジオボタン総数:", allRadios.length);
-      allRadios.forEach(radio => {
-        console.log(`ラジオボタン: id=${radio.id}, name=${radio.name}, checked=${radio.checked}`);
-      });
-      
       // ラジオボタンの選択を確認
-      const attendance = document.querySelector('input[name="entry.1823206220"]:checked');
-      console.log("選択された出欠:", attendance);
+      const attendanceRadio = document.querySelector('input[name="entry.1823206220"]:checked');
       
       if (!name.trim()) {
         showMessage('氏名を入力してください', 'error');
         return;
       }
       
-      if (!attendance) {
+      if (!attendanceRadio) {
         showMessage('出欠を選択してください', 'error');
         return;
       }
+      
+      const attendanceType = attendanceRadio.value;
       
       // 投球数の検証（入力されている場合）
       const pitches = document.getElementById('pitches').value;
@@ -188,11 +396,11 @@
       
       // 位置情報の取得開始
       showLoading(true);
-      getLocationAndCheck();
+      getLocationAndCheck(attendanceType);
     }
     
     // 位置情報取得と範囲内外チェック関数
-    function getLocationAndCheck() {
+    function getLocationAndCheck(attendanceType) {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function(position) {
           var lat = position.coords.latitude;
@@ -216,7 +424,7 @@
             document.getElementById('longitude').value = lon;
             
             // フォーム送信
-            submitForm();
+            submitForm(attendanceType);
           }
         }, function(error) {
           showLoading(false);
@@ -233,7 +441,7 @@
     }
 
     // フォーム送信処理
-    function submitForm() {
+    function submitForm(attendanceType) {
       const form = document.getElementById('attendanceForm');
       
       // FormDataオブジェクトを使用してフォームデータを取得
@@ -264,14 +472,14 @@
         // 送信成功時の処理
         showMessage("記録を完了しました！", 'success');
         
+        // 出欠記録を保存
+        saveAttendanceRecord(attendanceType);
+        
         // フォームを非表示にする
         form.style.display = 'none';
         
         // 「このページを閉じてください」の指示を表示
         document.getElementById('closeInstruction').style.display = 'block';
-        
-        // フォームをリセット
-        form.reset();
       })
       .catch(error => {
         console.error('送信エラー:', error);
@@ -325,7 +533,7 @@
       messageDiv.style.display = 'block';
       
       // 5秒後にエラーメッセージを消す（成功メッセージは残す）
-      if (type === 'error') {
+      if (type === 'error' || type === 'warning' || type === 'info') {
         setTimeout(() => {
           messageDiv.style.display = 'none';
         }, 5000);
