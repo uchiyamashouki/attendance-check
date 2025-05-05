@@ -21,18 +21,6 @@
       padding: 10px;
       width: 100%; /* スマホ画面に合わせる */
     }
-    /* スマホサイズに合わせたレスポンシブデザイン */
-    @media (max-width: 600px) {
-      body {
-        font-size: 16px; /* スマホ画面ではフォントサイズを小さく */
-      }
-      input[type="text"], input[type="number"], input[type="button"] {
-        font-size: 16px;
-      }
-      h2 {
-        font-size: 20px;
-      }
-    }
   </style>
   <script>
     // 位置情報取得と範囲内外チェック関数
@@ -92,7 +80,7 @@
 </head>
 <body>
   <h2>出欠記録フォーム</h2>
-  <form id="attendanceForm" action="https://docs.google.com/forms/u/0/d/e/1FAIpQLSegSTTLeL75exvNWpF2iEQqdP8nUC4p55TBLpjvPR1WGefBCA/formResponse" method="POST">
+  <form id="attendanceForm" action="https://docs.google.com/forms/d/e/1FAIpQLSd8G9f7gK6PjxkdG9eFhR9O3XeL5b5g5Tt5Xz5K8_jN69YP9Xg/formResponse" method="POST">
     <!-- 氏名入力 -->
     <label for="name">氏名:</label>
     <input type="text" name="entry.XXXXXXX" id="name" required>
@@ -122,3 +110,4 @@
   <div id="message"></div> 
 </body>
 </html>
+
