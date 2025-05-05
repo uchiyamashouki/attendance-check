@@ -3,251 +3,76 @@
 <head>
   <title>出欠記録フォーム</title>
   <style>
+    /* 基本のスタイルとレスポンシブ対応 */
     body {
       font-family: Arial, sans-serif;
       font-size: 18px;
-      padding: 20px;
+      padding: 10px;
       margin: 0;
       box-sizing: border-box;
-      max-width: 600px;
-      margin: 0 auto;
     }
     h2 {
       font-size: 24px;
-      color: #333;
-      margin-bottom: 20px;
     }
-    .form-group {
-      margin-bottom: 20px;
-    }
-    label {
+    label, input {
       font-size: 18px;
-      display: block;
-      margin-bottom: 8px;
-      font-weight: bold;
     }
-    input[type="text"], input[type="number"] {
+    input[type="text"], input[type="number"], input[type="button"] {
       font-size: 18px;
-      padding: 12px;
+      padding: 10px;
       width: 100%;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      box-sizing: border-box;
     }
-    .radio-group {
-      margin: 10px 0;
-    }
-    .radio-group label {
-      font-weight: normal;
-      display: inline;
-      margin-left: 8px;
-      margin-right: 20px;
-    }
-    input[type="radio"] {
-      transform: scale(1.5);
-      margin-right: 5px;
-    }
-    button {
-      font-size: 18px;
-      padding: 12px 20px;
-      width: 100%;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    #message {
-      margin-top: 20px;
-      padding: 15px;
-      border-radius: 4px;
-      font-weight: bold;
-      text-align: center;
-    }
-    .success {
-      background-color: #d4edda;
-      color: #155724;
-    }
-    .error {
-      background-color: #f8d7da;
-      color: #721c24;
-    }
-    .loading {
-      display: none;
-      text-align: center;
-      margin-top: 20px;
-    }
-    .spinner {
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #3498db;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      animation: spin 2s linear infinite;
-      margin: 0 auto;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    /* スマホ対応 */
+    @media (max-width: 600px) {
+      body {
+        font-size: 16px;
+      }
+      input[type="text"], input[type="number"], input[type="button"] {
+        font-size: 16px;
+      }
+      h2 {
+        font-size: 20px;
+      }
     }
   </style>
-</head>
-<body>
-  <h2>出欠記録フォーム</h2>
-  <form id="attendanceForm" action="https://docs.google.com/forms/d/e/1FAIpQLSd8G9f7gK6PjxkdG9eFhR9O3XeL5b5g5Tt5Xz5K8_jN69YP9Xg/formResponse" method="POST">
-    <div class="form-group">
-      <label for="name">氏名:</label>
-      <input type="text" name="entry.1823206220" id="name" required>
-    </div>
-    
-    <div class="form-group">
-      <label>出欠記録:</label>
-      <div class="radio-group">
-        <input type="radio" id="start" name="entry.1823206220" value="開始" required>
-        <label for="start">開始</label>
-        <input type="radio" id="end" name="entry.1823206220" value="終了" required>
-        <label for="end">終了</label>
-      </div>
-    </div>
-    
-    <div class="form-group">
-      <label for="pitches">投球数 (任意):</label>
-      <input type="number" name="entry.1823206220" id="pitches" placeholder="投球数" min="0">
-    </div>
-    
-    <!-- 位置情報 (非表示) -->
-    <input type="hidden" name="entry.1823206220" id="latitude">
-    <input type="hidden" name="entry.1823206220" id="longitude">
-    
-    <!-- 送信ボタン -->
-    <button type="button" id="submitBtn" onclick="validateAndSubmit()">送信</button>
-  </form>
-  
-  <!-- 読み込み表示 -->
-  <div id="loading" class="loading">
-    <div class="spinner"></div>
-    <p>位置情報を取得中...</p>
-  </div>
-  
-  <!-- 記録完了メッセージ -->
-  <div id="message"></div>
-
   <script>
-    // フォームの検証と送信
-    function validateAndSubmit() {
-      // 名前と出欠の検証
-      const name = document.getElementById('name').value;
-      const attendance = document.querySelector('input[name="entry.YYYYYYY"]:checked');
-      
-      if (!name.trim()) {
-        showMessage('氏名を入力してください', 'error');
-        return;
-      }
-      
-      if (!attendance) {
-        showMessage('出欠を選択してください', 'error');
-        return;
-      }
-      
-      // 投球数の検証（入力されている場合）
-      const pitches = document.getElementById('pitches').value;
-      if (pitches && (isNaN(pitches) || parseInt(pitches) < 0)) {
-        showMessage('投球数は0以上の数値を入力してください', 'error');
-        return;
-      }
-      
-      // 位置情報の取得開始
-      showLoading(true);
-      getLocationAndCheck();
-    }
-    
     // 位置情報取得と範囲内外チェック関数
     function getLocationAndCheck() {
+      // ユーザーの位置情報を取得
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function(position) {
-          var lat = position.coords.latitude;
-          var lon = position.coords.longitude;
+          var lat = position.coords.latitude;  // 緯度
+          var lon = position.coords.longitude; // 経度
 
-          // 茜浜球場の座標
+          // 茜浜球場の座標（デフォルトの座標）
           var targetLat = 35.662683;
           var targetLon = 140.008933;
-          var threshold = 0.1; // 許容範囲 (約100m)
+          var threshold = 10000; // 許容範囲 (100m * 100倍)
 
-          // 2点間の距離を計算（Haversine式）
+          // 位置情報と茜浜球場の距離を計算
           var distance = calculateDistance(lat, lon, targetLat, targetLon);
           
-          showLoading(false);
-          
+          // 範囲外の場合、送信を停止しメッセージを表示
           if (distance > threshold) {
-            showMessage(`位置情報が正しくありません。茜浜球場付近からアクセスしてください。現在地は球場から約${Math.round(distance * 1000)}m離れています。`, 'error');
+            alert("位置情報が正しくありません。茜浜球場付近からアクセスしてください。");
+            return;  // 送信しない
           } else {
-            // 位置情報が正しい場合、フォームに送信
-            document.getElementById('latitude').value = lat;
-            document.getElementById('longitude').value = lon;
-            
-            // フォーム送信
-            submitForm();
+            // 範囲内の場合、フォームの隠しフィールドに位置情報を設定
+            document.getElementById('latitude').value = lat;  // 緯度を隠しフィールドに設定
+            document.getElementById('longitude').value = lon; // 経度を隠しフィールドに設定
+            sendFormData();  // フォームデータを送信
+            // 送信完了メッセージを表示
+            document.getElementById('message').innerText = "送信完了　ページを閉じてください";
           }
         }, function(error) {
-          showLoading(false);
-          handleGeolocationError(error);
-        }, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
+          alert("位置情報が取得できません");
         });
       } else {
-        showLoading(false);
-        showMessage("お使いのブラウザは位置情報取得をサポートしていません", 'error');
+        alert("位置情報取得がサポートされていません");
       }
     }
 
-    // フォーム送信処理
-    function submitForm() {
-      const form = document.getElementById('attendanceForm');
-      
-      // FormDataオブジェクトを使用してフォームデータを取得
-      const formData = new FormData(form);
-      
-      // fetch APIを使用してフォームを送信
-      fetch(form.action, {
-        method: 'POST',
-        body: formData,
-        mode: 'no-cors' // Google Formsへのクロスオリジン送信に必要
-      })
-      .then(() => {
-        showMessage("記録を完了しました！", 'success');
-        form.reset(); // フォームをリセット
-      })
-      .catch(error => {
-        showMessage("送信中にエラーが発生しました。もう一度お試しください。", 'error');
-        console.error('送信エラー:', error);
-      });
-    }
-
-    // 位置情報エラーのハンドリング
-    function handleGeolocationError(error) {
-      switch(error.code) {
-        case error.PERMISSION_DENIED:
-          showMessage("位置情報の使用が許可されていません。ブラウザの設定で位置情報へのアクセスを許可してください。", 'error');
-          break;
-        case error.POSITION_UNAVAILABLE:
-          showMessage("位置情報が取得できません。屋外でもう一度お試しください。", 'error');
-          break;
-        case error.TIMEOUT:
-          showMessage("位置情報の取得がタイムアウトしました。もう一度お試しください。", 'error');
-          break;
-        default:
-          showMessage("位置情報の取得中にエラーが発生しました。", 'error');
-          break;
-      }
-    }
-
-    // 2点間の距離を計算（Haversine式）
+    // 2点間の距離を計算する関数（Haversine式）
     function calculateDistance(lat1, lon1, lat2, lon2) {
       var R = 6371; // 地球の半径 (km)
       var dLat = degreesToRadians(lat2 - lat1);
@@ -258,35 +83,54 @@
               Math.sin(dLon / 2) * Math.sin(dLon / 2);
       var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       
-      var distance = R * c; // 距離をkm単位で求める
+      var distance = R * c; // 距離を求める
       return distance;
     }
 
-    // 度をラジアンに変換
+    // 度をラジアンに変換する関数
     function degreesToRadians(degrees) {
       return degrees * Math.PI / 180;
     }
-    
-    // メッセージ表示関数
-    function showMessage(text, type) {
-      const messageDiv = document.getElementById('message');
-      messageDiv.textContent = text;
-      messageDiv.className = type;
-      messageDiv.style.display = 'block';
-      
-      // 5秒後にエラーメッセージを消す（成功メッセージは残す）
-      if (type === 'error') {
-        setTimeout(() => {
-          messageDiv.style.display = 'none';
-        }, 5000);
-      }
-    }
-    
-    // ローディング表示の切り替え
-    function showLoading(show) {
-      document.getElementById('loading').style.display = show ? 'block' : 'none';
-      document.getElementById('submitBtn').disabled = show;
+
+    // フォームデータを送信する関数
+    function sendFormData() {
+      var form = document.getElementById('attendanceForm');
+      // Googleフォームの送信URL（formResponse）
+      form.action = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSegSTTLeL75exvNWpF2iEQqdP8nUC4p55TBLpjvPR1WGefBCA/formResponse";
+      form.method = "POST"; // フォーム送信のHTTPメソッド（POST）
+      form.submit();  // フォーム送信
     }
   </script>
+</head>
+<body>
+  <h2>出欠記録フォーム</h2>
+  <form id="attendanceForm">
+    <!-- 氏名入力 -->
+    <label for="name">氏名:</label>
+    <input type="text" name="entry.XXXXXXX" id="name" required>
+    <br>
+    
+    <!-- 出欠記録 -->
+    <label for="attendance">出欠記録:</label><br>
+    <input type="radio" id="start" name="attendance" value="開始" required>
+    <label for="start">開始</label><br>
+    <input type="radio" id="end" name="attendance" value="終了" required>
+    <label for="end">終了</label><br>
+    
+    <br>
+    <label for="pitches">投球数 (任意):</label>
+    <input type="number" name="entry.AAAAAAA" placeholder="投球数">
+    <br>
+    
+    <!-- 位置情報 (非表示) -->
+    <input type="hidden" name="entry.BBBBBBB" id="latitude">
+    <input type="hidden" name="entry.CCCCCC" id="longitude">
+    
+    <!-- 送信ボタン -->
+    <input type="button" value="送信" onclick="getLocationAndCheck()">
+  </form>
+  
+  <!-- 送信完了メッセージ -->
+  <div id="message"></div> 
 </body>
 </html>
