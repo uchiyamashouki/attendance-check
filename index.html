@@ -257,7 +257,7 @@
   <!-- 新規ユーザー登録フォーム -->
   <div id="registrationForm" class="registration-form">
     <div class="form-group">
-      <label for="registerName">氏名を登録してください:</label>
+      <label for="registerName">氏名を登録してください（性と名にはスペース不要）:</label>
       <input type="text" id="registerName" placeholder="例：工大太郎" required>
     </div>
     <button type="button" onclick="registerUser()">登録</button>
@@ -534,7 +534,7 @@
           // 茜浜球場の座標
           var targetLat = 35.662683;
           var targetLon = 140.008933;
-          var threshold = 0.1; // 許容範囲 (約100m)
+          var threshold = 0.001; // 許容範囲 (約100m)デバックとして1/100倍
 
           // 2点間の距離を計算（Haversine式）
           var distance = calculateDistance(lat, lon, targetLat, targetLon);
