@@ -657,11 +657,11 @@
       messageDiv.className = type;
       messageDiv.style.display = 'block';
       
-      // 5秒後にエラーメッセージを消す（成功メッセージは残す）
+      // 8秒後にエラーメッセージを消す（成功メッセージは残す）
       if (type === 'error' || type === 'warning' || type === 'info') {
         setTimeout(() => {
           messageDiv.style.display = 'none';
-        }, 5000);
+        }, 8000);
       }
     }
     
