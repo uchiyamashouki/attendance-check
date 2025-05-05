@@ -1,2 +1,40 @@
-# attendance-check
+<img width="455" alt="image" src="https://github.com/user-attachments/assets/6cfc89ed-ac1e-4243-b5af-fecb4404b9ff" /># attendance-check
 出欠確認用ページ
+
+ブラウザから出欠記録を行うシンプルなWebアプリです。  
+ユーザー登録、出欠記録、位置情報チェック、Googleフォーム連携、管理者リセット機能を備えています。
+
+---
+
+## 📸 デモ画像
+<img width="455" alt="出欠管理アプリ" src="https://github.com/user-attachments/assets/cf47b8f1-71fa-4e5f-94f2-1066ab5eccd7" />
+
+※ `screenshot.png` は実際のスクリーンショットをプロジェクトに追加してください。
+
+---
+
+## 💡 主な機能
+
+- ユーザー登録（ブラウザ保存）
+- 出欠（開始 / 終了）記録
+- 投球数の記録（任意）
+- 位置情報チェック（茜浜球場周辺のみ有効）
+- Googleフォーム自動送信
+- 管理者パスワードで登録リセット
+- ローディング / 成功 / エラー / 警告表示
+
+---
+
+## ⚙️ 技術構成
+
+- HTML5
+- CSS3
+- JavaScript (ES6)
+- LocalStorage（ユーザーデータ保存）
+- Geolocation API（位置情報取得）
+- Google Forms（データ送信先）
+
+---
+
+## 📂 ファイル構成
+
