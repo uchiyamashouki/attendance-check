@@ -2,61 +2,83 @@
 <html>
 <head>
   <title>出欠記録フォーム</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     body {
       font-family: Arial, sans-serif;
-      font-size: 18px;
-      padding: 20px;
+      font-size: 16px;
+      padding: 15px;
       margin: 0;
       box-sizing: border-box;
-      max-width: 600px;
-      margin: 0 auto;
+      max-width: 100%;
+      background-color: #f8f9fa;
     }
     h2 {
-      font-size: 24px;
+      font-size: 22px;
       color: #333;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
+      text-align: center;
     }
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
     label {
-      font-size: 18px;
+      font-size: 16px;
       display: block;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       font-weight: bold;
     }
     input[type="text"], input[type="number"], input[type="password"] {
-      font-size: 18px;
+      font-size: 16px;
       padding: 12px;
       width: 100%;
       border: 1px solid #ddd;
-      border-radius: 4px;
+      border-radius: 8px;
       box-sizing: border-box;
+      -webkit-appearance: none;
     }
     .radio-group {
       margin: 10px 0;
+      display: flex;
+      justify-content: space-around;
     }
     .radio-group label {
       font-weight: normal;
       display: inline;
       margin-left: 8px;
-      margin-right: 20px;
+      margin-right: 0;
+    }
+    .radio-option {
+      display: flex;
+      align-items: center;
     }
     input[type="radio"] {
       transform: scale(1.5);
       margin-right: 5px;
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #ddd;
+      border-radius: 50%;
+      outline: none;
+    }
+    input[type="radio"]:checked {
+      border: 2px solid #4CAF50;
+      background-color: #4CAF50;
+      box-shadow: inset 0 0 0 4px white;
     }
     button {
       font-size: 18px;
-      padding: 12px 20px;
+      padding: 15px 20px;
       width: 100%;
       background-color: #4CAF50;
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 8px;
       cursor: pointer;
       margin-top: 10px;
+      -webkit-appearance: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     button:hover {
       background-color: #45a049;
@@ -68,9 +90,10 @@
     #message {
       margin-top: 20px;
       padding: 15px;
-      border-radius: 4px;
+      border-radius: 8px;
       font-weight: bold;
       text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .success {
       background-color: #d4edda;
@@ -113,13 +136,18 @@
       font-weight: bold;
       color: #333;
       display: none;
+      padding: 15px;
+      background-color: #d4edda;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .user-info {
       background-color: #e9ecef;
       padding: 15px;
-      border-radius: 4px;
-      margin-bottom: 20px;
+      border-radius: 8px;
+      margin-bottom: 15px;
       display: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .user-info p {
       margin: 0;
@@ -133,11 +161,13 @@
       background-color: #6c757d;
       color: white;
       border: none;
-      padding: 8px 12px;
-      border-radius: 4px;
+      padding: 10px 12px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 14px;
       margin-top: 10px;
+      width: 100%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .reset-button:hover {
       background-color: #5a6268;
@@ -145,6 +175,10 @@
     .registration-form {
       display: none;
       margin-top: 20px;
+      background-color: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     /* モーダルスタイル */
     .modal {
@@ -159,15 +193,18 @@
     }
     .modal-content {
       background-color: #fefefe;
-      margin: 15% auto;
+      margin: 30% auto;
       padding: 20px;
-      border-radius: 5px;
-      width: 80%;
+      border-radius: 8px;
+      width: 90%;
       max-width: 400px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     .modal-title {
       margin-top: 0;
       color: #333;
+      font-size: 18px;
+      text-align: center;
     }
     .modal-buttons {
       display: flex;
@@ -176,12 +213,19 @@
     }
     .modal-buttons button {
       width: 48%;
+      padding: 12px 0;
     }
     .cancel-button {
       background-color: #6c757d;
     }
     .cancel-button:hover {
       background-color: #5a6268;
+    }
+    #attendanceForm {
+      background-color: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
   </style>
 </head>
@@ -229,10 +273,14 @@
     <div class="form-group">
       <label>出欠記録:</label>
       <div class="radio-group">
-        <input type="radio" id="start" name="entry.1823206220" value="開始" required>
-        <label for="start">開始</label>
-        <input type="radio" id="end" name="entry.1823206220" value="終了" required>
-        <label for="end">終了</label>
+        <div class="radio-option">
+          <input type="radio" id="start" name="entry.1823206220" value="開始" required>
+          <label for="start">開始</label>
+        </div>
+        <div class="radio-option">
+          <input type="radio" id="end" name="entry.1823206220" value="終了" required>
+          <label for="end">終了</label>
+        </div>
       </div>
     </div>
     
