@@ -98,7 +98,7 @@
 </head>
 <body>
   <h2>出欠記録フォーム</h2>
-  <form id="attendanceForm" action="https://docs.google.com/forms/d/e/1FAIpQLSd8G9f7gK6PjxkdG9eFhR9O3XeL5b5g5Tt5Xz5K8_jN69YP9Xg/formResponse" method="POST">
+  <form id="attendanceForm" action="https://docs.google.com/forms/u/0/d/e/1FAIpQLSegSTTLeL75exvNWpF2iEQqdP8nUC4p55TBLpjvPR1WGefBCA/formResponse" method="POST">
     <div class="form-group">
       <label for="name">氏名:</label>
       <input type="text" name="entry.1235081500" id="name" required>
@@ -153,7 +153,7 @@
       });
       
       // ラジオボタンのname属性を実際のフォームIDに合わせて調整
-      const attendance = document.querySelector('input[name="entry.YYYYYYY"]:checked') || 
+      const attendance = document.querySelector('input[name="entry.2085125757"]:checked') || 
                      document.querySelector('input[id="start"]:checked') || 
                      document.querySelector('input[id="end"]:checked');
       console.log("選択された出欠:", attendance);
