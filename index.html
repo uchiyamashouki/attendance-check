@@ -155,7 +155,7 @@
   <div id="userInfo" class="user-info">
     <p>登録ユーザー: <span id="registeredName" class="user-name"></span></p>
     <p id="lastAttendanceInfo"></p>
-    <button id="resetUserBtn" class="reset-button" onclick="resetUserData()">別のユーザーとして登録</button>
+  <!--  <button id="resetUserBtn" class="reset-button" onclick="resetUserData()">別のユーザーとして登録</button> -->
   </div>
   
   <!-- 新規ユーザー登録フォーム -->
@@ -323,13 +323,14 @@
     }
     
     // ユーザーデータのリセット
-    function resetUserData() {
+    /*function resetUserData() {
       if (confirm('登録情報をリセットしますか？')) {
         localStorage.removeItem('attendanceUserData');
         initializeUserData();
         showMessage('登録情報をリセットしました', 'info');
       }
     }
+    */
     
     // ユーザーデータの取得
     function getUserData() {
