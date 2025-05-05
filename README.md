@@ -1,4 +1,3 @@
-<img width="455" alt="image" src="https://github.com/user-attachments/assets/6cfc89ed-ac1e-4243-b5af-fecb4404b9ff" /># attendance-check
 出欠確認用ページ
 
 ブラウザから出欠記録を行うシンプルなWebアプリです。  
