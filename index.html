@@ -1,4 +1,255 @@
 <!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>顔認証 出欠記録（複数人対応）</title>
+  <style>
+    video, canvas {
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid #ccc;
+    }
+    #nameDisplay {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    #recordForm, #registerForm, #deleteForm {
+      display: none;
+      margin-top: 20px;
+    }
+    label, select, input {
+      display: block;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h2>顔認証による本人確認（複数人対応）</h2>
+  <video id="video" autoplay muted playsinline></video>
+
+  <div id="nameDisplay">認証中...</div>
+
+  <form id="registerForm">
+    <label>氏名を入力して登録：</label>
+    <input type="text" id="newName" required placeholder="例：工大 太郎">
+    <button type="button" id="registerBtn">顔と氏名を登録</button>
+  </form>
+
+  <form id="deleteForm">
+    <label>削除する氏名：</label>
+    <input type="text" id="deleteName" placeholder="例：工大 太郎">
+    <label>パスワード：</label>
+    <input type="password" id="deletePass" placeholder="パスワード">
+    <button type="button" id="deleteBtn">登録データを削除</button>
+  </form>
+
+  <form id="recordForm">
+    <label>開始 / 終了:</label>
+    <select id="status" required>
+      <option value="">選択してください</option>
+      <option value="開始">開始</option>
+      <option value="終了">終了</option>
+    </select>
+    <label>投球数（任意）:</label>
+    <input type="number" id="pitchCount" placeholder="投球数">
+    <button type="submit">記録を送信</button>
+  </form>
+
+  <script type="module">
+    import { FaceMesh } from 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js';
+    import { Camera } from 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
+
+    const video = document.getElementById('video');
+    const nameDisplay = document.getElementById('nameDisplay');
+    const form = document.getElementById('recordForm');
+    const registerForm = document.getElementById('registerForm');
+    const newNameInput = document.getElementById('newName');
+    const registerBtn = document.getElementById('registerBtn');
+    const deleteForm = document.getElementById('deleteForm');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const deleteNameInput = document.getElementById('deleteName');
+    const deletePassInput = document.getElementById('deletePass');
+
+    let authenticatedName = null;
+
+    function loadProfiles() {
+      return JSON.parse(localStorage.getItem('faceProfiles') || '[]');
+    }
+
+    function saveProfile(name, landmarks) {
+      const profiles = loadProfiles();
+      profiles.push({ name, landmarks });
+      localStorage.setItem('faceProfiles', JSON.stringify(profiles));
+      alert(`${name} の顔を登録しました`);
+    }
+
+    function deleteProfile(name, password) {
+      if (password !== 'Kodai1942!') {
+        alert('パスワードが正しくありません');
+        return;
+      }
+      let profiles = loadProfiles();
+      const initialLength = profiles.length;
+      profiles = profiles.filter(p => p.name !== name);
+      if (profiles.length < initialLength) {
+        localStorage.setItem('faceProfiles', JSON.stringify(profiles));
+        alert(`${name} の登録を削除しました`);
+        location.reload();
+      } else {
+        alert(`${name} は登録されていません`);
+      }
+    }
+
+    function compareLandmarks(landmarks1, landmarks2) {
+      if (!landmarks1 || !landmarks2 || landmarks1.length !== landmarks2.length) return Infinity;
+      let sum = 0;
+      for (let i = 0; i < landmarks1.length; i++) {
+        const dx = landmarks1[i].x - landmarks2[i].x;
+        const dy = landmarks1[i].y - landmarks2[i].y;
+        const dz = landmarks1[i].z - landmarks2[i].z;
+        sum += dx * dx + dy * dy + dz * dz;
+      }
+      return Math.sqrt(sum / landmarks1.length);
+    }
+
+    function checkSubmissionLimit(name) {
+      const today = new Date().toISOString().split('T')[0];
+      const key = `submitCount_${name}_${today}`;
+      const count = parseInt(localStorage.getItem(key) || '0', 10);
+      return count < 2;
+    }
+
+    function incrementSubmissionCount(name) {
+      const today = new Date().toISOString().split('T')[0];
+      const key = `submitCount_${name}_${today}`;
+      const count = parseInt(localStorage.getItem(key) || '0', 10);
+      localStorage.setItem(key, (count + 1).toString());
+    }
+
+    async function checkLocation() {
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const { latitude, longitude } = pos.coords;
+          const targetLat = 35.662683;
+          const targetLng = 140.008933;
+          const R = 6371e3;
+          const dLat = (latitude - targetLat) * Math.PI / 180;
+          const dLng = (longitude - targetLng) * Math.PI / 180;
+          const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(targetLat * Math.PI/180) * Math.cos(latitude * Math.PI/180) *
+                    Math.sin(dLng/2) * Math.sin(dLng/2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          const distance = R * c;
+          resolve(distance < 100);
+        }, () => reject(false));
+      });
+    }
+
+    const faceMesh = new FaceMesh({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+    });
+
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.8,
+      minTrackingConfidence: 0.8
+    });
+
+    let lastLandmarks = null;
+    faceMesh.onResults = (results) => {
+      if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+        lastLandmarks = results.multiFaceLandmarks[0];
+        if (!authenticatedName) {
+          const profiles = loadProfiles();
+          for (const profile of profiles) {
+            const diff = compareLandmarks(lastLandmarks, profile.landmarks);
+            if (diff < 0.01) {
+              authenticatedName = profile.name;
+              nameDisplay.textContent = `${authenticatedName} さんとして認証されました`;
+              form.style.display = checkSubmissionLimit(authenticatedName) ? 'block' : 'none';
+              registerForm.style.display = 'none';
+              deleteForm.style.display = 'block';
+              return;
+            }
+          }
+          nameDisplay.textContent = `認証失敗中... 未登録者です`;
+          registerForm.style.display = 'block';
+        }
+      }
+    };
+
+    const camera = new Camera(video, {
+      onFrame: async () => {
+        await faceMesh.send({ image: video });
+      },
+      width: 400,
+      height: 300
+    });
+    camera.start();
+
+    registerBtn.addEventListener('click', () => {
+      if (!newNameInput.value.trim()) {
+        alert("氏名を入力してください");
+        return;
+      }
+      if (lastLandmarks) {
+        saveProfile(newNameInput.value.trim(), lastLandmarks);
+        registerForm.reset();
+        registerForm.style.display = 'none';
+        nameDisplay.textContent = `${newNameInput.value.trim()} を登録しました`;
+      } else {
+        alert("顔が検出されていません。顔をカメラに向けてください。");
+      }
+    });
+
+    deleteBtn.addEventListener('click', () => {
+      const name = deleteNameInput.value.trim();
+      const pass = deletePassInput.value;
+      deleteProfile(name, pass);
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = document.getElementById('status').value;
+      const pitch = document.getElementById('pitchCount').value;
+
+      if (!checkSubmissionLimit(authenticatedName)) {
+        alert("本日はすでに2回記録されています。");
+        return;
+      }
+
+      const locationAllowed = await checkLocation().catch(() => false);
+      if (!locationAllowed) {
+        alert("この場所では記録できません（茜浜球場の範囲外です）。");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("entry.411119479", authenticatedName);
+      formData.append("entry.1823206220", status);
+      formData.append("entry.114182324", pitch);
+
+      fetch("https://docs.google.com/forms/d/e/1FAIpQLSegSTTLeL75exvNWpF2iEQqdP8nUC4p55TBLpjvPR1WGefBCA/formResponse", {
+        method: "POST",
+        mode: "no-cors",
+        body: formData
+      });
+
+      incrementSubmissionCount(authenticatedName);
+      alert(`記録送信完了：\n名前: ${authenticatedName}\n状態: ${status}\n投球数: ${pitch}`);
+      form.reset();
+      form.style.display = 'none';
+    });
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
 <html>
 <head>
   <title>出欠記録フォーム</title>
