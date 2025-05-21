@@ -2,184 +2,902 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>顔認証 出欠記録（face-api.js版 + 位置情報）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>顔認証 出欠記録システム（改良版）</title>
+  <!-- face-api.jsの読み込み -->
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
   <style>
+    /* 基本スタイル */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    
+    body {
+      background-color: #f5f5f5;
+      color: #333;
+      line-height: 1.5;
+      padding: 1rem;
+    }
+    
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 1.5rem;
+    }
+    
+    h1 {
+      font-size: 1.5rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #333;
+    }
+    
+    /* ビデオ関連 */
+    .video-container {
+      position: relative;
+      margin-bottom: 1rem;
+    }
+    
     video {
       width: 100%;
-      max-width: 400px;
-      border: 1px solid #ccc;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      background-color: #f0f0f0;
     }
-    #nameDisplay {
-      font-size: 1.2rem;
+    
+    .video-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      color: white;
       font-weight: bold;
-      margin-top: 10px;
     }
-    #recordForm, #registerForm, #deleteForm {
+    
+    .pulse {
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      50% { opacity: 1; }
+      100% { opacity: 0.6; }
+    }
+    
+    /* 認証状態表示 */
+    .auth-status {
+      text-align: center;
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+    }
+    
+    .auth-status.success {
+      background-color: #e6f7e6;
+      color: #2e7d32;
+      border: 1px solid #c8e6c9;
+    }
+    
+    .auth-status.pending {
+      background-color: #fff8e1;
+      color: #ff8f00;
+      border: 1px solid #ffe082;
+    }
+    
+    .auth-status.error {
+      background-color: #ffebee;
+      color: #c62828;
+      border: 1px solid #ffcdd2;
+    }
+    
+    /* タブ関連 */
+    .tabs {
+      display: flex;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .tab-button {
+      flex: 1;
+      padding: 0.75rem;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.2s;
+    }
+    
+    .tab-button.active {
+      color: #1a73e8;
+      border-bottom-color: #1a73e8;
+    }
+    
+    .tab-content {
       display: none;
-      margin-top: 20px;
+      padding: 1rem 0;
     }
-    label, select, input {
+    
+    .tab-content.active {
       display: block;
-      margin-bottom: 10px;
     }
-    button {
-      padding: 10px;
+    
+    /* フォーム関連 */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
       font-size: 1rem;
+    }
+    
+    input:focus, select:focus {
+      outline: none;
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+    }
+    
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #1557b0;
+    }
+    
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    
+    button.secondary {
+      background-color: white;
+      color: #1a73e8;
+      border: 1px solid #1a73e8;
+    }
+    
+    button.secondary:hover {
+      background-color: #f5f9ff;
+    }
+    
+    button.danger {
+      background-color: #d32f2f;
+    }
+    
+    button.danger:hover {
+      background-color: #b71c1c;
+    }
+    
+    /* アラート */
+    .alert {
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: flex-start;
+    }
+    
+    .alert-icon {
+      margin-right: 0.5rem;
+      flex-shrink: 0;
+    }
+    
+    .alert-content {
+      flex-grow: 1;
+    }
+    
+    .alert-title {
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+    
+    .alert-info {
+      background-color: #e8f4fd;
+      border: 1px solid #c2e0ff;
+      color: #0d47a1;
+    }
+    
+    .alert-warning {
+      background-color: #fff8e1;
+      border: 1px solid #ffe082;
+      color: #ff8f00;
+    }
+    
+    .alert-error {
+      background-color: #ffebee;
+      border: 1px solid #ffcdd2;
+      color: #c62828;
+    }
+    
+    /* トースト通知 */
+    .toast-container {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      z-index: 1000;
+    }
+    
+    .toast {
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+      background-color: #323232;
+      color: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      animation: slideIn 0.3s, fadeOut 0.5s 2.5s forwards;
+      max-width: 300px;
+    }
+    
+    .toast.success {
+      background-color: #43a047;
+    }
+    
+    .toast.error {
+      background-color: #d32f2f;
+    }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; visibility: hidden; }
+    }
+    
+    /* ユーティリティ */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
     }
   </style>
 </head>
 <body>
-  <h2>顔認証による本人確認（複数人対応）</h2>
-  <video id="video" autoplay muted playsinline></video>
-  <div id="nameDisplay">認証中...</div>
-
-  <form id="registerForm">
-    <label>氏名を入力して登録：</label>
-    <input type="text" id="newName" required placeholder="例：工大 太郎">
-    <button type="button" id="registerBtn">顔と氏名を登録</button>
-  </form>
-
-  <form id="deleteForm">
-    <label>削除する氏名：</label>
-    <input type="text" id="deleteName" placeholder="例：工大 太郎">
-    <label>パスワード：</label>
-    <input type="password" id="deletePass" placeholder="パスワード">
-    <button type="button" id="deleteBtn">登録データを削除</button>
-  </form>
-
-  <form id="recordForm">
-    <label>開始 / 終了:</label>
-    <select id="status" required>
-      <option value="">選択してください</option>
-      <option value="開始">開始</option>
-      <option value="終了">終了</option>
-    </select>
-    <label>投球数（任意）:</label>
-    <input type="number" id="pitchCount" placeholder="投球数">
-    <button type="submit">記録を送信</button>
-  </form>
-
+  <div class="container">
+    <h1>顔認証 出欠記録システム</h1>
+    
+    <!-- ビデオ表示エリア -->
+    <div class="video-container">
+      <video id="video" autoplay muted playsinline></video>
+      <div id="recognizing-overlay" class="video-overlay" style="display: none;">
+        <div class="pulse">認識中...</div>
+      </div>
+    </div>
+    
+    <!-- 認証状態表示 -->
+    <div id="auth-status" class="auth-status pending">
+      顔認証を開始してください
+    </div>
+    
+    <button id="start-recognition" type="button">顔認証を開始</button>
+    
+    <!-- タブ -->
+    <div class="tabs">
+      <button class="tab-button active" data-tab="attendance">出欠記録</button>
+      <button class="tab-button" data-tab="register">新規登録</button>
+      <button class="tab-button" data-tab="admin">管理</button>
+    </div>
+    
+    <!-- 出欠記録タブ -->
+    <div id="attendance-tab" class="tab-content active">
+      <form id="attendance-form">
+        <div class="form-group">
+          <label for="status">開始 / 終了</label>
+          <select id="status" required>
+            <option value="">選択してください</option>
+            <option value="開始">開始</option>
+            <option value="終了">終了</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="pitch-count">投球数（任意）</label>
+          <input type="number" id="pitch-count" placeholder="投球数">
+        </div>
+        
+        <div id="location-error" class="alert alert-error" style="display: none;">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-content">
+            <div class="alert-title">位置情報エラー</div>
+            <div>茜浜球場の範囲外からは記録できません</div>
+          </div>
+        </div>
+        
+        <button type="submit" id="submit-btn" disabled>記録を送信</button>
+        
+        <div class="form-group" style="margin-top: 1rem;">
+          <button type="button" id="check-location" class="secondary">位置情報を確認</button>
+        </div>
+      </form>
+      
+      <div id="auth-required-alert" class="alert alert-info" style="display: none;">
+        <div class="alert-icon">ℹ️</div>
+        <div class="alert-content">
+          <div class="alert-title">認証が必要です</div>
+          <div>出欠を記録するには、まず顔認証を行ってください。</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 新規登録タブ -->
+    <div id="register-tab" class="tab-content">
+      <form id="register-form">
+        <div class="form-group">
+          <label for="new-name">氏名</label>
+          <input type="text" id="new-name" placeholder="例：工大 太郎" required>
+        </div>
+        
+        <button type="button" id="register-btn">顔と氏名を登録</button>
+      </form>
+      
+      <div class="alert alert-info" style="margin-top: 1rem;">
+        <div class="alert-icon">ℹ️</div>
+        <div class="alert-content">
+          <div class="alert-title">プライバシーについて</div>
+          <div>顔データはお使いのデバイスにのみ保存され、サーバーには送信されません。</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 管理タブ -->
+    <div id="admin-tab" class="tab-content">
+      <form id="delete-form">
+        <div class="form-group">
+          <label for="delete-name">削除する氏名</label>
+          <input type="text" id="delete-name" placeholder="例：工大 太郎">
+        </div>
+        
+        <div class="form-group">
+          <label for="delete-pass">パスワード</label>
+          <input type="password" id="delete-pass" placeholder="パスワード">
+        </div>
+        
+        <button type="button" id="delete-btn" class="danger">登録データを削除</button>
+      </form>
+    </div>
+  </div>
+  
+  <!-- トースト通知コンテナ -->
+  <div id="toast-container" class="toast-container"></div>
+  
   <script>
+    // DOM要素
     const video = document.getElementById('video');
-    const nameDisplay = document.getElementById('nameDisplay');
-    const registerForm = document.getElementById('registerForm');
-    const recordForm = document.getElementById('recordForm');
-    const deleteForm = document.getElementById('deleteForm');
-    const newNameInput = document.getElementById('newName');
-    const registerBtn = document.getElementById('registerBtn');
-    const deleteBtn = document.getElementById('deleteBtn');
-    const deleteNameInput = document.getElementById('deleteName');
-    const deletePassInput = document.getElementById('deletePass');
-
+    const recognizingOverlay = document.getElementById('recognizing-overlay');
+    const authStatus = document.getElementById('auth-status');
+    const startRecognitionBtn = document.getElementById('start-recognition');
+    const attendanceForm = document.getElementById('attendance-form');
+    const registerForm = document.getElementById('register-form');
+    const deleteForm = document.getElementById('delete-form');
+    const newNameInput = document.getElementById('new-name');
+    const registerBtn = document.getElementById('register-btn');
+    const deleteBtn = document.getElementById('delete-btn');
+    const deleteNameInput = document.getElementById('delete-name');
+    const deletePassInput = document.getElementById('delete-pass');
+    const statusSelect = document.getElementById('status');
+    const pitchCountInput = document.getElementById('pitch-count');
+    const submitBtn = document.getElementById('submit-btn');
+    const checkLocationBtn = document.getElementById('check-location');
+    const locationError = document.getElementById('location-error');
+    const authRequiredAlert = document.getElementById('auth-required-alert');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const toastContainer = document.getElementById('toast-container');
+    
+    // 状態変数
+    let stream = null;
+    let recognizedUser = null;
+    let isRecognizing = false;
+    let isLocationValid = null;
+    let isSubmitting = false;
+    let modelsLoaded = false;
     let labeledDescriptors = [];
-    let authenticatedName = null;
-
+    
+    // 茜浜球場の座標
+    const TARGET_LAT = 35.662683;
+    const TARGET_LON = 140.008933;
+    const MAX_DISTANCE = 100; // 許容距離（メートル）
+    
+    // 管理者パスワード（実際のアプリでは環境変数や安全な方法で管理すべき）
+    const ADMIN_PASSWORD = 'Kodai1942!';
+    
+    // Google Formsの送信先URL
+    const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSegSTTLeL75exvNWpF2iEQqdP8nUC4p55TBLpjvPR1WGefBCA/formResponse';
+    
+    // 初期化
+    async function init() {
+      updateAuthStatus('pending', '顔認証を開始してください');
+      updateFormVisibility();
+      
+      // タブ切り替えイベントリスナー
+      tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const tabName = button.getAttribute('data-tab');
+          switchTab(tabName);
+        });
+      });
+      
+      // 各種ボタンのイベントリスナー
+      startRecognitionBtn.addEventListener('click', startRecognition);
+      registerBtn.addEventListener('click', handleRegister);
+      deleteBtn.addEventListener('click', handleDelete);
+      checkLocationBtn.addEventListener('click', checkLocationValidity);
+      attendanceForm.addEventListener('submit', handleSubmit);
+      
+      // カメラの初期化
+      await startCamera();
+      
+      // face-api.jsモデルの読み込み
+      await loadModels();
+      
+      // 保存されたプロファイルの読み込み
+      labeledDescriptors = loadProfiles();
+    }
+    
+    // カメラの初期化
     async function startCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
-      video.srcObject = stream;
-    }
-
-    function loadProfiles() {
-      const data = JSON.parse(localStorage.getItem('faceProfiles') || '[]');
-      return data.map(p => new faceapi.LabeledFaceDescriptors(p.name, [new Float32Array(p.descriptor)]));
-    }
-
-    function saveProfile(name, descriptor) {
-      const data = JSON.parse(localStorage.getItem('faceProfiles') || '[]');
-      data.push({ name, descriptor: Array.from(descriptor) });
-      localStorage.setItem('faceProfiles', JSON.stringify(data));
-      alert(`${name} を登録しました`);
-    }
-
-    function deleteProfile(name, password) {
-      if (password !== 'Kodai1942!') return alert('パスワードが正しくありません');
-      let data = JSON.parse(localStorage.getItem('faceProfiles') || '[]');
-      data = data.filter(p => p.name !== name);
-      localStorage.setItem('faceProfiles', JSON.stringify(data));
-      alert(`${name} を削除しました`);
-      location.reload();
-    }
-
-    async function recognizeFace() {
-      const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-      if (!detections) return;
-      const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-      const match = faceMatcher.findBestMatch(detections.descriptor);
-      if (match.label !== 'unknown') {
-        authenticatedName = match.label;
-        nameDisplay.textContent = `${authenticatedName} さんとして認証されました`;
-        recordForm.style.display = 'block';
-        registerForm.style.display = 'none';
-        deleteForm.style.display = 'block';
-      } else {
-        nameDisplay.textContent = '未登録の顔です';
-        registerForm.style.display = 'block';
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' }
+        });
+        video.srcObject = stream;
+      } catch (error) {
+        console.error('カメラアクセスエラー:', error);
+        showToast('カメラへのアクセスに失敗しました', 'error');
       }
     }
-
-    registerBtn.onclick = async () => {
-      if (!newNameInput.value.trim()) return alert('氏名を入力してください');
-      const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-      if (!detection) return alert('顔が検出されません');
-      saveProfile(newNameInput.value.trim(), detection.descriptor);
-      location.reload();
-    };
-
-    deleteBtn.onclick = () => {
-      deleteProfile(deleteNameInput.value.trim(), deletePassInput.value);
-    };
-
-    async function isInsideField() {
-      return new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(pos => {
-          const lat = pos.coords.latitude;
-          const lon = pos.coords.longitude;
-          const targetLat = 35.662683;
-          const targetLon = 140.008933;
-          const R = 6371e3;
-          const toRad = deg => deg * Math.PI / 180;
-          const dLat = toRad(lat - targetLat);
-          const dLon = toRad(lon - targetLon);
-          const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(targetLat)) * Math.cos(toRad(lat)) * Math.sin(dLon / 2) ** 2;
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          const distance = R * c;
-          resolve(distance <= 100);
-        }, err => reject(false));
-      });
+    
+    // face-api.jsモデルの読み込み
+    async function loadModels() {
+      if (modelsLoaded) return;
+      
+      try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models')
+        ]);
+        modelsLoaded = true;
+      } catch (error) {
+        console.error('モデル読み込みエラー:', error);
+        showToast('顔認識モデルの読み込みに失敗しました', 'error');
+      }
     }
-
-    recordForm.onsubmit = async (e) => {
-      e.preventDefault();
-      if (!(await isInsideField())) {
-        alert("茜浜球場の範囲外からは記録できません。");
+    
+    // 顔認識の開始
+    async function startRecognition() {
+      if (isRecognizing) return;
+      
+      isRecognizing = true;
+      recognizingOverlay.style.display = 'flex';
+      updateAuthStatus('pending', '認識中...');
+      startRecognitionBtn.disabled = true;
+      
+      try {
+        const name = await recognizeFace();
+        recognizedUser = name;
+        
+        if (name) {
+          updateAuthStatus('success', `${name}さんとして認証されました`);
+          showToast(`${name}さんとして認証されました`, 'success');
+          switchTab('attendance');
+        } else {
+          updateAuthStatus('error', '未登録の顔です');
+          showToast('登録されていないか、顔が認識できませんでした', 'error');
+          switchTab('register');
+        }
+      } catch (error) {
+        console.error('認識エラー:', error);
+        updateAuthStatus('error', '認識エラー');
+        showToast('顔認識中にエラーが発生しました', 'error');
+      } finally {
+        isRecognizing = false;
+        recognizingOverlay.style.display = 'none';
+        startRecognitionBtn.disabled = false;
+        updateFormVisibility();
+      }
+    }
+    
+    // 顔認識処理
+    async function recognizeFace() {
+      if (labeledDescriptors.length === 0) {
+        return null; // 登録されたプロファイルがない
+      }
+      
+      try {
+        // 顔検出と特徴抽出
+        const detection = await faceapi
+          .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+        
+        if (!detection) {
+          return null; // 顔が検出されなかった
+        }
+        
+        // 顔マッチング（閾値を0.5に設定して精度を向上）
+        const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
+        const match = faceMatcher.findBestMatch(detection.descriptor);
+        
+        return match.label !== 'unknown' ? match.label : null;
+      } catch (error) {
+        console.error('顔認識エラー:', error);
+        throw new Error('顔認識処理中にエラーが発生しました');
+      }
+    }
+    
+    // 顔の登録
+    async function handleRegister() {
+      const name = newNameInput.value.trim();
+      if (!name) {
+        showToast('氏名を入力してください', 'error');
         return;
       }
-      const status = document.getElementById('status').value;
-      const pitch = document.getElementById('pitchCount').value;
-      const formData = new FormData();
-      formData.append("entry.411119479", authenticatedName);
-      formData.append("entry.1823206220", status);
-      formData.append("entry.114182324", pitch);
-      fetch("https://docs.google.com/forms/d/e/1FAIpQLSegSTTLeL75exvNWpF2iEQqdP8nUC4p55TBLpjvPR1WGefBCA/formResponse", {
-        method: "POST",
-        mode: "no-cors",
-        body: formData
-      });
-      alert("送信完了しました！");
-      recordForm.reset();
-      recordForm.style.display = 'none';
-    };
-
-    async function init() {
-      await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models');
-      await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models');
-      await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js/models');
-      labeledDescriptors = loadProfiles();
-      await startCamera();
-      setInterval(recognizeFace, 2000);
+      
+      try {
+        // 顔検出と特徴抽出
+        const detection = await faceapi
+          .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+        
+        if (!detection) {
+          showToast('顔が検出されませんでした', 'error');
+          return;
+        }
+        
+        // プロファイル保存
+        saveProfile(name, detection.descriptor);
+        showToast(`${name}さんの顔を登録しました`, 'success');
+        newNameInput.value = '';
+        
+        // プロファイル再読み込み
+        labeledDescriptors = loadProfiles();
+      } catch (error) {
+        console.error('顔登録エラー:', error);
+        showToast('顔の登録に失敗しました', 'error');
+      }
     }
-
+    
+    // 顔プロファイルの削除
+    async function handleDelete() {
+      const name = deleteNameInput.value.trim();
+      const password = deletePassInput.value;
+      
+      if (!name || !password) {
+        showToast('氏名とパスワードを入力してください', 'error');
+        return;
+      }
+      
+      if (password !== ADMIN_PASSWORD) {
+        showToast('パスワードが正しくありません', 'error');
+        return;
+      }
+      
+      try {
+        let data = JSON.parse(localStorage.getItem('faceProfiles') || '[]');
+        const initialLength = data.length;
+        data = data.filter(p => p.name !== name);
+        
+        if (data.length === initialLength) {
+          showToast('該当するユーザーが見つかりません', 'error');
+          return;
+        }
+        
+        localStorage.setItem('faceProfiles', JSON.stringify(data));
+        showToast(`${name}さんの登録を削除しました`, 'success');
+        deleteNameInput.value = '';
+        deletePassInput.value = '';
+        
+        // プロファイル再読み込み
+        labeledDescriptors = loadProfiles();
+      } catch (error) {
+        console.error('プロファイル削除エラー:', error);
+        showToast('プロファイルの削除に失敗しました', 'error');
+      }
+    }
+    
+    // 位置情報の確認
+    async function checkLocationValidity() {
+      checkLocationBtn.disabled = true;
+      checkLocationBtn.textContent = '確認中...';
+      locationError.style.display = 'none';
+      
+      try {
+        const isValid = await checkLocation();
+        isLocationValid = isValid;
+        
+        if (!isValid) {
+          locationError.style.display = 'flex';
+          showToast('茜浜球場の範囲外からは記録できません', 'error');
+        } else {
+          showToast('位置情報の確認が完了しました', 'success');
+        }
+      } catch (error) {
+        console.error('位置情報エラー:', error);
+        showToast('位置情報の取得に失敗しました', 'error');
+        isLocationValid = false;
+        locationError.style.display = 'flex';
+      } finally {
+        checkLocationBtn.disabled = false;
+        checkLocationBtn.textContent = '位置情報を確認';
+        updateSubmitButtonState();
+      }
+    }
+    
+    // 位置情報を取得してチェック
+    function checkLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error('位置情報がサポートされていません'));
+          return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const distance = calculateDistance(
+              position.coords.latitude,
+              position.coords.longitude,
+              TARGET_LAT,
+              TARGET_LON
+            );
+            
+            resolve(distance <= MAX_DISTANCE);
+          },
+          (error) => {
+            console.error('位置情報エラー:', error);
+            reject(new Error('位置情報の取得に失敗しました'));
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      });
+    }
+    
+    // 2点間の距離を計算（ハーバーサイン公式）
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3; // 地球の半径（メートル）
+      const φ1 = (lat1 * Math.PI) / 180;
+      const φ2 = (lat2 * Math.PI) / 180;
+      const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+      const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+      
+      const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      
+      return R * c; // メートル単位の距離
+    }
+    
+    // 出欠記録の送信
+    async function handleSubmit(e) {
+      e.preventDefault();
+      
+      if (!recognizedUser || !statusSelect.value) {
+        showToast('必須項目を入力してください', 'error');
+        return;
+      }
+      
+      isSubmitting = true;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '送信中...';
+      
+      try {
+        // 位置情報をまだ確認していない場合は確認する
+        if (isLocationValid === null) {
+          await checkLocationValidity();
+          if (!isLocationValid) {
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.textContent = '記録を送信';
+            return;
+          }
+        }
+        
+        // Google Formsに送信
+        await submitAttendance({
+          name: recognizedUser,
+          status: statusSelect.value,
+          pitchCount: pitchCountInput.value ? parseInt(pitchCountInput.value) : undefined
+        });
+        
+        showToast('出欠記録を送信しました', 'success');
+        
+        // フォームリセット
+        statusSelect.value = '';
+        pitchCountInput.value = '';
+      } catch (error) {
+        console.error('送信エラー:', error);
+        showToast('記録の送信に失敗しました', 'error');
+      } finally {
+        isSubmitting = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = '記録を送信';
+        updateSubmitButtonState();
+      }
+    }
+    
+    // Google Formsに送信
+    async function submitAttendance(data) {
+      try {
+        // FormDataの作成
+        const formData = new FormData();
+        formData.append('entry.411119479', data.name);
+        formData.append('entry.1823206220', data.status);
+        
+        if (data.pitchCount !== undefined) {
+          formData.append('entry.114182324', data.pitchCount.toString());
+        }
+        
+        // フォーム送信
+        // no-corsモードを使用（CORSの制限により、成功/失敗の判定はできない）
+        await fetch(FORM_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: formData
+        });
+        
+        // 送信ログを記録（オプション）
+        logAttendance(data);
+        
+        return;
+      } catch (error) {
+        console.error('送信エラー:', error);
+        throw new Error('出欠記録の送信に失敗しました');
+      }
+    }
+    
+    // ローカルに送信ログを保存（オプション）
+    function logAttendance(data) {
+      try {
+        const logs = JSON.parse(localStorage.getItem('attendanceLogs') || '[]');
+        logs.push({
+          ...data,
+          timestamp: new Date().toISOString()
+        });
+        localStorage.setItem('attendanceLogs', JSON.stringify(logs));
+      } catch (error) {
+        console.error('ログ保存エラー:', error);
+      }
+    }
+    
+    // ローカルストレージから顔プロファイルを読み込む
+    function loadProfiles() {
+      try {
+        const data = JSON.parse(localStorage.getItem('faceProfiles') || '[]');
+        return data.map(p => new faceapi.LabeledFaceDescriptors(p.name, [new Float32Array(p.descriptor)]));
+      } catch (error) {
+        console.error('プロファイル読み込みエラー:', error);
+        return [];
+      }
+    }
+    
+    // 顔プロファイルを保存
+    function saveProfile(name, descriptor) {
+      try {
+        const data = JSON.parse(localStorage.getItem('faceProfiles') || '[]');
+        // 同じ名前のプロファイルがあれば上書き
+        const existingIndex = data.findIndex(p => p.name === name);
+        if (existingIndex >= 0) {
+          data[existingIndex] = { name, descriptor: Array.from(descriptor) };
+        } else {
+          data.push({ name, descriptor: Array.from(descriptor) });
+        }
+        localStorage.setItem('faceProfiles', JSON.stringify(data));
+        return true;
+      } catch (error) {
+        console.error('プロファイル保存エラー:', error);
+        throw new Error('顔データの保存に失敗しました');
+      }
+    }
+    
+    // 認証状態の更新
+    function updateAuthStatus(type, message) {
+      authStatus.className = `auth-status ${type}`;
+      authStatus.textContent = message;
+    }
+    
+    // フォームの表示/非表示を更新
+    function updateFormVisibility() {
+      if (recognizedUser) {
+        authRequiredAlert.style.display = 'none';
+        attendanceForm.style.display = 'block';
+      } else {
+        authRequiredAlert.style.display = 'flex';
+        attendanceForm.style.display = 'none';
+      }
+      
+      updateSubmitButtonState();
+    }
+    
+    // 送信ボタンの状態を更新
+    function updateSubmitButtonState() {
+      submitBtn.disabled = !recognizedUser || !statusSelect.value || isSubmitting || isLocationValid === false;
+    }
+    
+    // タブの切り替え
+    function switchTab(tabName) {
+      tabButtons.forEach(button => {
+        if (button.getAttribute('data-tab') === tabName) {
+          button.classList.add('active');
+        } else {
+          button.classList.remove('active');
+        }
+      });
+      
+      tabContents.forEach(content => {
+        if (content.id === `${tabName}-tab`) {
+          content.classList.add('active');
+        } else {
+          content.classList.remove('active');
+        }
+      });
+    }
+    
+    // トースト通知を表示
+    function showToast(message, type = 'default') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      
+      toastContainer.appendChild(toast);
+      
+      // 3秒後に削除
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+    
+    // ステータス選択の変更イベント
+    statusSelect.addEventListener('change', updateSubmitButtonState);
+    
+    // 初期化
     init();
   </script>
 </body>
